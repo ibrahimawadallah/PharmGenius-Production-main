@@ -45,4 +45,3 @@ services:
         value: "false"
       - key: NPM_CONFIG_PRODUCTION
         value: "false"
-    env
