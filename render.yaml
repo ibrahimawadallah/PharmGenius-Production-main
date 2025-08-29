@@ -16,13 +16,10 @@ services:
       - key: NODE_ENV
         value: production
       - key: MONGODB_URI
-        value: ""
         sync: false
       - key: JWT_SECRET
-        value: ""
         sync: false
       - key: CORS_ORIGIN
-        value: ""
         sync: false
       - key: AUTH_DISABLED
         value: "false"
