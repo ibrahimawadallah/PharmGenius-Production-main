@@ -7,35 +7,45 @@ services:
     name: pharmgenius-backend
     region: oregon
     runtime: node
+    plan: starter
     buildCommand: npm install
     startCommand: node server/server.js
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
         value: 18.x
       - key: NODE_ENV
         value: production
-      - key: MONGODB_URI
-        sync: false
       - key: JWT_SECRET
-        sync: false
+        generateValue: true
       - key: CORS_ORIGIN
-        sync: false
+        fromService:
+          type: static_site
+          name: pharmgenius-frontend
+          property: url
+      - key: FRONTEND_URL
+        fromService:
+          type: static_site
+          name: pharmgenius-frontend
+          property: url
       - key: AUTH_DISABLED
         value: "false"
       # - key: LOG_LEVEL
       #   value: info
 
   # Frontend Service (React)
-  - type: web
+  - type: static_site
     name: pharmgenius-frontend
-    runtime: static
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     envVars:
       - key: NODE_VERSION
         value: 18.x
       - key: VITE_API_URL
-        value: "https://pharmgenius-backend.onrender.com"
+        fromService:
+          type: web
+          name: pharmgenius-backend
+          property: url
       - key: VITE_AUTH_DISABLED
         value: "false"
       - key: NPM_CONFIG_PRODUCTION
