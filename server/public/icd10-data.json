@@ -1,0 +1,7 @@
+[
+  { "code": "E11.9", "description": "Type 2 diabetes mellitus without complications", "category": "Endocrine, nutritional and metabolic diseases" },
+  { "code": "I10", "description": "Essential (primary) hypertension", "category": "Diseases of the circulatory system" },
+  { "code": "J45.909", "description": "Unspecified asthma, uncomplicated", "category": "Diseases of the respiratory system" },
+  { "code": "K21.9", "description": "Gastro-esophageal reflux disease without esophagitis", "category": "Diseases of the digestive system" },
+  { "code": "M54.5", "description": "Low back pain", "category": "Diseases of the musculoskeletal system and connective tissue" }
+]

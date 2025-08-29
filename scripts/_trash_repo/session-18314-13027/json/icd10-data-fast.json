@@ -1,0 +1,100 @@
+{
+  "RIBAVIRIN": [
+    {
+      "code": "MED_CONDITION",
+      "description": "infection (medical condition)"
+    },
+    {
+      "code": "MED_CONDITION",
+      "description": "ear (medical condition)"
+    },
+    {
+      "code": "MED_CONDITION",
+      "description": "infection (medical condition)"
+    }
+  ],
+  "TEVA-CHLORPROMAZINE": [
+    {
+      "code": "MED_CONDITION",
+      "description": "nausea (medical condition)"
+    },
+    {
+      "code": "MED_CONDITION",
+      "description": "vomiting (medical condition)"
+    },
+    {
+      "code": "MED_CONDITION",
+      "description": "ear (medical condition)"
+    }
+  ],
+  "HYDROXYCHLOROQUINE": [
+    {
+      "code": "MED_CONDITION",
+      "description": "arthritis (medical condition)"
+    },
+    {
+      "code": "MED_CONDITION",
+      "description": "liver (medical condition)"
+    },
+    {
+      "code": "MED_CONDITION",
+      "description": "infection (medical condition)"
+    }
+  ],
+  "ZOLPIDEM": [
+    {
+      "code": "MED_CONDITION",
+      "description": "insomnia (medical condition)"
+    },
+    {
+      "code": "MED_CONDITION",
+      "description": "insomnia (medical condition)"
+    },
+    {
+      "code": "MED_CONDITION",
+      "description": "insomnia (medical condition)"
+    }
+  ],
+  "DECITABINE": [
+    {
+      "code": "MED_CONDITION",
+      "description": "anemia (medical condition)"
+    },
+    {
+      "code": "MED_CONDITION",
+      "description": "anemia (medical condition)"
+    },
+    {
+      "code": "MED_CONDITION",
+      "description": "anemia (medical condition)"
+    }
+  ],
+  "EPOPROSTENOL": [
+    {
+      "code": "MED_CONDITION",
+      "description": "hypertension (medical condition)"
+    },
+    {
+      "code": "MED_CONDITION",
+      "description": "hypertension (medical condition)"
+    },
+    {
+      "code": "MED_CONDITION",
+      "description": "hypertension (medical condition)"
+    }
+  ],
+  "SERTRALINE": [
+    {
+      "code": "MED_CONDITION",
+      "description": "nose (medical condition)"
+    },
+    {
+      "code": "MED_CONDITION",
+      "description": "ear (medical condition)"
+    },
+    {
+      "code": "MED_CONDITION",
+      "description": "nose (medical condition)"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+﻿{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "jsx": "preserve",
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true
+  }
+}

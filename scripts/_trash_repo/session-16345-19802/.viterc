@@ -1,0 +1,11 @@
+{
+  "exclude": [
+    "snowstorm/**",
+    "dist/**",
+    "node_modules/**",
+    "docs/**",
+    "config/**",
+    "scripts/**",
+    "server/**"
+  ]
+}

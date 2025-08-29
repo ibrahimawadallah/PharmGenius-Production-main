@@ -1,0 +1,514 @@
+
+// ✅ Project: Next.js (App Router) + Tailwind + shadcn/ui
+// This snippet adds:
+// 1) Tools Hub page: /tools
+// 2) ICD-10 → Drug Finder page: /tools/icd-to-drug  (calls /api/icd-to-drug)
+// 3) Drug → ICD-10 Mapper page: /tools/drug-to-icd  (calls /api/drug-to-icd)
+// 4) API Bridge endpoints under /app/api
+// Notes:
+// - WHO ICD-10 API & RxNorm are public; some endpoints may require adjustments or auth over time.
+// - We include graceful fallbacks when external APIs fail (so your UI still works for demo/testing).
+// - Uses shadcn/ui components: Card, Button, Input, Table, Badge, Alert.
+
+/* ------------------------------
+   app/api/icd-to-drug/route.ts
+------------------------------ */
+
+import { NextResponse } from "next/server";
+
+// Helper: fetch JSON with timeout
+async function fetchJSON(url: string, opts: RequestInit = {}, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...opts, signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+// Very small specialty mapper (extend as needed)
+function guessSpecialty(condition: string) {
+  const s = condition.toLowerCase();
+  if (s.includes("diabetes")) return "Endocrinology";
+  if (s.includes("hypertension") || s.includes("angina") || s.includes("heart")) return "Cardiology";
+  if (s.includes("asthma") || s.includes("copd") || s.includes("respir")) return "Pulmonology";
+  if (s.includes("depress") || s.includes("anxiety")) return "Psychiatry";
+  return "General Medicine";
+}
+
+// Naive trade name guesser — replace with RxNorm properties if needed
+function extractGenericFromName(name: string) {
+  // e.g., "Metformin 500 MG Oral Tablet" → "Metformin"
+  return name.split(/\s\d|\s\(/)[0];
+}
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const q = (searchParams.get("q") || "").trim();
+  if (!q) return NextResponse.json({ error: "Missing query 'q'" }, { status: 400 });
+
+  try {
+    // 1) WHO ICD-10: if q is code (like E11) try direct; else search
+    let icdCode = q.toUpperCase();
+    let conditionTitle = "";
+
+    const isCode = /^[A-TV-Z][0-9][0-9A-Z](\.[0-9A-Z]{1,4})?$/.test(icdCode);
+
+    if (isCode) {
+      // Example endpoint (may vary by WHO release); adjust if needed
+      // Fallback to search if direct fetch fails
+      try {
+        const url = `https://id.who.int/icd/release/10/${encodeURIComponent(icdCode)}`;
+        const data = await fetchJSON(url);
+        conditionTitle = data.title || data.name || icdCode;
+      } catch {
+        const url = `https://id.who.int/icd/release/10/search?q=${encodeURIComponent(icdCode)}`;
+        const data = await fetchJSON(url);
+        // naive pick first
+        const first = Array.isArray(data?.destinationEntities) ? data.destinationEntities[0] : null;
+        conditionTitle = first?.title || icdCode;
+        icdCode = first?.code || icdCode;
+      }
+    } else {
+      const url = `https://id.who.int/icd/release/10/search?q=${encodeURIComponent(q)}`;
+      const data = await fetchJSON(url);
+      const first = Array.isArray(data?.destinationEntities) ? data.destinationEntities[0] : null;
+      icdCode = first?.code || q;
+      conditionTitle = first?.title || q;
+    }
+
+    // 2) RxNorm search using condition keyword (very naive). 
+    // For production, prefer UMLS or curated mapping.
+    const rxUrl = `https://rxnav.nlm.nih.gov/REST/drugs.json?name=${encodeURIComponent(conditionTitle.split(/[:,-]/)[0])}`;
+    let drugs: Array<{ generic: string; trade?: string; rxcui?: string }> = [];
+    try {
+      const rx = await fetchJSON(rxUrl);
+      const groups = rx?.drugGroup?.conceptGroup || [];
+      for (const g of groups) {
+        for (const p of g?.conceptProperties || []) {
+          const generic = extractGenericFromName(p.name || p.synonym || "");
+          if (!generic) continue;
+          drugs.push({ generic, trade: p.synonym, rxcui: p.rxcui });
+        }
+      }
+    } catch {
+      // fallback minimal demo set if RxNorm query fails
+      if (/diabetes/i.test(conditionTitle)) drugs = [
+        { generic: "Metformin", trade: "Glucophage" },
+        { generic: "Insulin", trade: "Lantus" },
+      ];
+      else if (/hypertension/i.test(conditionTitle)) drugs = [
+        { generic: "Amlodipine", trade: "Norvasc" },
+        { generic: "Losartan", trade: "Cozaar" },
+      ];
+    }
+
+    // Unique by generic
+    const uniq = new Map<string, any>();
+    for (const d of drugs) if (!uniq.has(d.generic)) uniq.set(d.generic, d);
+    drugs = Array.from(uniq.values()).slice(0, 25);
+
+    return NextResponse.json({
+      icd: icdCode,
+      condition: conditionTitle,
+      specialty: guessSpecialty(conditionTitle),
+      drugs,
+      source: {
+        icd: "WHO ICD-10",
+        drugs: "RxNorm"
+      }
+    });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || "Server error" }, { status: 500 });
+  }
+}
+
+/* ------------------------------
+   app/api/drug-to-icd/route.ts
+------------------------------ */
+
+import { NextResponse as NextResponse2 } from "next/server";
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const q = (searchParams.get("q") || "").trim();
+  if (!q) return NextResponse2.json({ error: "Missing query 'q'" }, { status: 400 });
+
+  try {
+    // 1) RxNorm: find normalized drug info
+    const rxUrl = `https://rxnav.nlm.nih.gov/REST/drugs.json?name=${encodeURIComponent(q)}`;
+    let drugName = q;
+    let candidates: any[] = [];
+
+    try {
+      const rx = await fetch(rxUrl);
+      if (rx.ok) {
+        const j = await rx.json();
+        const groups = j?.drugGroup?.conceptGroup || [];
+        for (const g of groups) for (const p of g?.conceptProperties || []) candidates.push(p);
+        if (candidates[0]?.name) drugName = candidates[0].name.split(/\s\d|\s\(/)[0];
+      }
+    } catch {}
+
+    // 2) Heuristic map to ICD keywords (for production, use UMLS or curated DB)
+    const keyword = drugName.toLowerCase();
+    let suggestions: Array<{ code: string; condition: string; specialty: string }> = [];
+    if (/(metformin|glucophage)/.test(keyword)) suggestions = [
+      { code: "E11", condition: "Type 2 diabetes mellitus", specialty: "Endocrinology" },
+    ];
+    else if (/(amlodipine|norvasc)/.test(keyword)) suggestions = [
+      { code: "I10", condition: "Essential (primary) hypertension", specialty: "Cardiology" },
+      { code: "I20", condition: "Angina pectoris", specialty: "Cardiology" },
+    ];
+    else if (/(losartan|cozaar)/.test(keyword)) suggestions = [
+      { code: "I10", condition: "Essential (primary) hypertension", specialty: "Cardiology" },
+    ];
+    else if (/(salbutamol|albuterol|ventolin)/.test(keyword)) suggestions = [
+      { code: "J45", condition: "Asthma", specialty: "Pulmonology" },
+    ];
+    else {
+      // Fallback generic
+      suggestions = [
+        { code: "Z76.89", condition: "Person encountering health services (unspecified)", specialty: "General Medicine" },
+      ];
+    }
+
+    return NextResponse2.json({
+      drug: drugName,
+      related_icd: suggestions,
+      source: {
+        drug: "RxNorm (normalized)",
+        icd: "Heuristic/UMLS-curation recommended"
+      }
+    });
+  } catch (e: any) {
+    return NextResponse2.json({ error: e?.message || "Server error" }, { status: 500 });
+  }
+}
+
+/* ------------------------------
+   app/tools/page.tsx  (Hub)
+------------------------------ */
+
+"use client";
+import Link from "next/link";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Stethoscope, Syringe, Pill, Search } from "lucide-react";
+
+export default function ToolsHubPage() {
+  const tools = [
+    {
+      title: "ICD-10 → Drug Finder",
+      desc: "اكتب كود ICD-10 أو تشخيص وابحث عن الأدوية المرتبطة.",
+      href: "/tools/icd-to-drug",
+      icon: <Stethoscope className="h-6 w-6" />,
+      tag: "Live"
+    },
+    {
+      title: "Drug → ICD-10 Mapper",
+      desc: "اكتب اسم دواء (علمي/تجاري) واعرف التشخيصات المناسبة.",
+      href: "/tools/drug-to-icd",
+      icon: <Pill className="h-6 w-6" />,
+      tag: "Live"
+    },
+    {
+      title: "Dosage Calculator",
+      desc: "حاسبة جرعات (قريبًا).",
+      href: "#",
+      icon: <Syringe className="h-6 w-6" />,
+      tag: "Soon"
+    },
+    {
+      title: "Drug Interactions Checker",
+      desc: "تشيك على التفاعلات الدوائية (قريبًا).",
+      href: "#",
+      icon: <Search className="h-6 w-6" />,
+      tag: "Soon"
+    }
+  ];
+
+  return (
+    <div className="max-w-5xl mx-auto p-6 space-y-6">
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold">Smart Pharmacy Tools</h1>
+        <p className="text-muted-foreground">أدوات سريعة تساعد الصيدلي في الشغل اليومي.</p>
+      </div>
+      <div className="grid gap-6 sm:grid-cols-2">
+        {tools.map((t) => (
+          <Card key={t.title} className="flex flex-col justify-between">
+            <CardHeader className="space-y-1">
+              <div className="flex items-center gap-2">
+                {t.icon}
+                <CardTitle>{t.title}</CardTitle>
+                <Badge variant={t.tag === "Live" ? "default" : "secondary"}>{t.tag}</Badge>
+              </div>
+              <CardDescription>{t.desc}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {t.href !== "#" ? (
+                <Button asChild className="w-full">
+                  <Link href={t.href}>Open Tool</Link>
+                </Button>
+              ) : (
+                <Button disabled className="w-full">Coming Soon</Button>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------
+   app/tools/icd-to-drug/page.tsx
+------------------------------ */
+
+"use client";
+import { useState } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+export default function ICDToDrug() {
+  const [q, setQ] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const search = async () => {
+    setError(null); setLoading(true); setData(null);
+    try {
+      const res = await fetch(`/api/icd-to-drug?q=${encodeURIComponent(q)}`);
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error || "API error");
+      setData(j);
+    } catch (e: any) {
+      setError(e?.message || "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto p-6 space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>ICD-10 → Drug Finder</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input placeholder="E11 أو Type 2 Diabetes" value={q} onChange={(e) => setQ(e.target.value)} />
+            <Button onClick={search} disabled={!q || loading}>{loading ? "Searching..." : "Search"}</Button>
+          </div>
+          {error && (
+            <Alert variant="destructive">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          {data && (
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                Source: {data.source?.icd} + {data.source?.drugs} • Specialty: <b>{data.specialty}</b>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ICD</TableHead>
+                    <TableHead>Condition</TableHead>
+                    <TableHead>Generic</TableHead>
+                    <TableHead>Trade</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.drugs?.map((d: any, i: number) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-medium">{data.icd}</TableCell>
+                      <TableCell>{data.condition}</TableCell>
+                      <TableCell>{d.generic}</TableCell>
+                      <TableCell>{d.trade || "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* ------------------------------
+   app/tools/drug-to-icd/page.tsx
+------------------------------ */
+
+"use client";
+import { useState as useState2 } from "react";
+import { Card as Card2, CardHeader as CardHeader2, CardTitle as CardTitle2, CardContent as CardContent2 } from "@/components/ui/card";
+import { Input as Input2 } from "@/components/ui/input";
+import { Button as Button2 } from "@/components/ui/button";
+import { Table as Table2, TableHeader as TableHeader2, TableRow as TableRow2, TableHead as TableHead2, TableBody as TableBody2, TableCell as TableCell2 } from "@/components/ui/table";
+import { Alert as Alert2, AlertDescription as AlertDescription2, AlertTitle as AlertTitle2 } from "@/components/ui/alert";
+
+export default function DrugToICD() {
+  const [q, setQ] = useState2("");
+  const [loading, setLoading] = useState2(false);
+  const [data, setData] = useState2<any>(null);
+  const [error, setError] = useState2<string | null>(null);
+
+  const search = async () => {
+    setError(null); setLoading(true); setData(null);
+    try {
+      const res = await fetch(`/api/drug-to-icd?q=${encodeURIComponent(q)}`);
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error || "API error");
+      setData(j);
+    } catch (e: any) {
+      setError(e?.message || "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-5xl mx_auto p-6 space-y-6">
+      <Card2>
+        <CardHeader2>
+          <CardTitle2>Drug → ICD-10 Mapper</CardTitle2>
+        </CardHeader2>
+        <CardContent2 className="space-y-4">
+          <div className="flex gap-2">
+            <Input2 placeholder="Metformin أو Norvasc" value={q} onChange={(e) => setQ(e.target.value)} />
+            <Button2 onClick={search} disabled={!q || loading}>{loading ? "Searching..." : "Search"}</Button2>
+          </div>
+          {error && (
+            <Alert2 variant="destructive">
+              <AlertTitle2>Error</AlertTitle2>
+              <AlertDescription2>{error}</AlertDescription2>
+            </Alert2>
+          )}
+          {data && (
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                Source: {data.source?.drug} • Mapping: {data.source?.icd}
+              </div>
+              <Table2>
+                <TableHeader2>
+                  <TableRow2>
+                    <TableHead2>Drug</TableHead2>
+                    <TableHead2>ICD</TableHead2>
+                    <TableHead2>Condition</TableHead2>
+                    <TableHead2>Specialty</TableHead2>
+                  </TableRow2>
+                </TableHeader2>
+                <TableBody2>
+                  {data.related_icd?.map((r: any, i: number) => (
+                    <TableRow2 key={i}>
+                      <TableCell2 className="font-medium">{data.drug}</TableCell2>
+                      <TableCell2>{r.code}</TableCell2>
+                      <TableCell2>{r.condition}</TableCell2>
+                      <TableCell2>{r.specialty}</TableCell2>
+                    </TableRow2>
+                  ))}
+                </TableBody2>
+              </Table2>
+            </div>
+          )}
+        </CardContent2>
+      </Card2>
+    </div>
+  );
+}
+
+/* ------------------------------
+   Quick shadcn/ui placeholders (if needed)
+   If your project already has shadcn/ui set up, remove this section.
+   Otherwise, create these minimal wrappers under /components/ui
+------------------------------ */
+
+// components/ui/button.tsx
+import * as React from "react";
+import { Slot } from "@radix-ui/react-slot";
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "@/lib/utils";
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 border",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground",
+        secondary: "bg-secondary text-secondary-foreground",
+        outline: "bg-transparent",
+      },
+    },
+    defaultVariants: { variant: "default" },
+  }
+);
+
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> { asChild?: boolean }
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button";
+    return (
+      <Comp className={cn(buttonVariants({ variant }), className)} ref={ref} {...props} />
+    );
+  }
+);
+Button.displayName = "Button";
+
+// components/ui/card.tsx
+import * as React2 from "react";
+import { cn as cn2 } from "@/lib/utils";
+export function Card({ className, ...props }: React2.HTMLAttributes<HTMLDivElement>) { return <div className={cn2("rounded-2xl border bg-card text-card-foreground shadow-sm", className)} {...props} /> }
+export function CardHeader({ className, ...props }: React2.HTMLAttributes<HTMLDivElement>) { return <div className={cn2("flex flex-col space-y-1.5 p-6", className)} {...props} /> }
+export function CardTitle({ className, ...props }: React2.HTMLAttributes<HTMLHeadingElement>) { return <h3 className={cn2("text-2xl font-semibold leading-none tracking-tight", className)} {...props} /> }
+export function CardDescription({ className, ...props }: React2.HTMLAttributes<HTMLParagraphElement>) { return <p className={cn2("text-sm text-muted-foreground", className)} {...props} /> }
+export function CardContent({ className, ...props }: React2.HTMLAttributes<HTMLDivElement>) { return <div className={cn2("p-6 pt-0", className)} {...props} /> }
+
+// components/ui/input.tsx
+import * as React3 from "react";
+import { cn as cn3 } from "@/lib/utils";
+export const Input = React3.forwardRef<HTMLInputElement, React3.InputHTMLAttributes<HTMLInputElement>>(({ className, ...props }, ref) => (
+  <input ref={ref} className={cn3("flex h-10 w-full rounded-2xl border bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1", className)} {...props} />
+));
+Input.displayName = "Input";
+
+// components/ui/table.tsx
+import * as React4 from "react";
+import { cn as cn4 } from "@/lib/utils";
+export function Table({ className, ...props }: React4.HTMLAttributes<HTMLTableElement>) { return <table className={cn4("w_full caption-bottom text-sm", className)} {...props} /> }
+export function TableHeader(props: React4.HTMLAttributes<HTMLTableSectionElement>) { return <thead {...props} /> }
+export function TableBody(props: React4.HTMLAttributes<HTMLTableSectionElement>) { return <tbody {...props} /> }
+export function TableRow({ className, ...props }: React4.HTMLAttributes<HTMLTableRowElement>) { return <tr className={cn4("border-b", className)} {...props} /> }
+export function TableHead({ className, ...props }: React4.ThHTMLAttributes<HTMLTableCellElement>) { return <th className={cn4("h-10 px-2 text-left align-middle font-medium", className)} {...props} /> }
+export function TableCell({ className, ...props }: React4.TdHTMLAttributes<HTMLTableCellElement>) { return <td className={cn4("p-2 align-middle", className)} {...props} /> }
+
+// components/ui/badge.tsx
+import * as React5 from "react";
+import { cn as cn5 } from "@/lib/utils";
+export function Badge({ className, ...props }: React5.HTMLAttributes<HTMLSpanElement>) { return <span className={cn5("inline-flex items-center rounded-full border px-2 py-0.5 text-xs", className)} {...props} /> }
+
+// components/ui/alert.tsx
+import * as React6 from "react";
+import { cn as cn6 } from "@/lib/utils";
+export function Alert({ className, ...props }: React6.HTMLAttributes<HTMLDivElement>) { return <div className={cn6("w-full rounded-2xl border p-4", className)} {...props} /> }
+export function AlertTitle({ className, ...props }: React6.HTMLAttributes<HTMLHeadingElement>) { return <h5 className={cn6("mb-1 font-semibold", className)} {...props} /> }
+export function AlertDescription({ className, ...props }: React6.HTMLAttributes<HTMLParagraphElement>) { return <p className={cn6("text-sm text-muted-foreground", className)} {...props} /> }
+
+/* ------------------------------
+   lib/utils.ts  (tiny helper for cn)
+------------------------------ */
+
+export function cn(...classes: (string | undefined | null | false)[]) {
+  return classes.filter(Boolean).join(" ");
+}

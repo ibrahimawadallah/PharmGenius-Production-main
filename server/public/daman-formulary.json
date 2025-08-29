@@ -1,0 +1,38 @@
+[
+  {
+    "Drug Name": "Glucophage",
+    "Generic Name": "Metformin",
+    "Strength": "500mg",
+    "Dosage Form": "Tablet",
+    "Route": "Oral",
+    "Active Ingredient": "Metformin",
+    "Manufacturer": "Merck",
+    "Coverage": "Covered",
+    "Tier": "Tier 1",
+    "Restrictions": "None"
+  },
+  {
+    "Drug Name": "Norvasc",
+    "Generic Name": "Amlodipine",
+    "Strength": "5mg",
+    "Dosage Form": "Tablet",
+    "Route": "Oral",
+    "Active Ingredient": "Amlodipine",
+    "Manufacturer": "Pfizer",
+    "Coverage": "Covered",
+    "Tier": "Tier 2",
+    "Restrictions": "Prior Authorization"
+  },
+  {
+    "Drug Name": "Ventolin",
+    "Generic Name": "Salbutamol",
+    "Strength": "100mcg/dose",
+    "Dosage Form": "Inhaler",
+    "Route": "Inhalation",
+    "Active Ingredient": "Salbutamol",
+    "Manufacturer": "GSK",
+    "Coverage": "Covered",
+    "Tier": "Tier 1",
+    "Restrictions": "None"
+  }
+]

@@ -1,0 +1,21 @@
+Package Name,Generic Name,Dosage Form,Strength,Manufacturer Name,Agent Name,Package Size,Package Price to Public,Unit Price to Public,Included in Thiqa/ ABM - other than 1&7- Drug Formulary,Included In Basic Drug Formulary,Included In ABM 1 Drug Formulary,Included In ABM 7 Drug Formulary,Status
+Panadol,Acetaminophen,Tablet,500mg,GSK,ABC Med,24,15.50,0.65,Yes,Yes,No,No,Active
+Panadol Extra,Acetaminophen+Caffeine,Tablet,500mg+32mg,GSK,ABC Med,20,18.75,0.94,Yes,Yes,No,No,Active
+Advil,Ibuprofen,Tablet,200mg,Pfizer,DEF Pharma,24,22.00,0.92,No,Yes,No,No,Active
+Brufen,Ibuprofen,Tablet,400mg,Abbott,DEF Pharma,30,28.50,0.95,No,Yes,No,No,Active
+Voltaren,Diclofenac,Tablet,50mg,Novartis,XYZ Health,30,32.75,1.09,No,Yes,No,No,Active
+Aspirin,Acetylsalicylic Acid,Tablet,100mg,Bayer,XYZ Health,30,12.25,0.41,Yes,Yes,No,No,Active
+Plavix,Clopidogrel,Tablet,75mg,Sanofi,XYZ Health,28,125.00,4.46,No,No,Yes,Yes,Active
+Lipitor,Atorvastatin,Tablet,20mg,Pfizer,DEF Pharma,30,89.50,2.98,No,No,Yes,Yes,Active
+Crestor,Rosuvastatin,Tablet,10mg,AstraZeneca,DEF Pharma,30,95.75,3.19,No,No,Yes,Yes,Active
+Glucophage,Metformin,Tablet,500mg,Merck,ABC Med,60,45.25,0.75,Yes,Yes,No,No,Active
+Lantus,Insulin Glargine,Injectable,100IU/mL,Sanofi,XYZ Health,1,285.00,285.00,No,No,Yes,Yes,Active
+Humalog,Insulin Lispro,Injectable,100IU/mL,Lilly,XYZ Health,1,295.50,295.50,No,No,Yes,Yes,Active
+Norvasc,Amlodipine,Tablet,5mg,Pfizer,DEF Pharma,30,35.75,1.19,Yes,Yes,No,No,Active
+Zestril,Lisinopril,Tablet,10mg,AstraZeneca,DEF Pharma,30,42.00,1.40,Yes,Yes,No,No,Active
+Lasix,Furosemide,Tablet,40mg,Sanofi,XYZ Health,30,28.25,0.94,Yes,Yes,No,No,Active
+Nexium,Esomeprazole,Capsule,20mg,AstraZeneca,DEF Pharma,28,78.00,2.79,No,No,Yes,Yes,Active
+Omeprazole,Omeprazole,Capsule,20mg,Various,DEF Pharma,28,32.50,1.16,Yes,Yes,No,No,Active
+Augmentin,Amoxicillin+Clavulanate,Tablet,625mg,GSK,ABC Med,14,55.75,3.98,No,Yes,No,No,Active
+Cipro,Ciprofloxacin,Tablet,500mg,Bayer,XYZ Health,10,48.25,4.83,No,Yes,No,No,Active
+Ventolin,Salbutamol,Inhaler,100mcg/dose,GSK,ABC Med,1,42.75,42.75,Yes,Yes,No,No,Active
