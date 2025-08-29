@@ -22,10 +22,11 @@ services:
       #   sync: false
 
   # Frontend Service (React)
-  - type: static_site
+  - type: web
     name: pharmgenius-frontend
     plan: free
     region: oregon
+    runtime: static
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     envVars:
