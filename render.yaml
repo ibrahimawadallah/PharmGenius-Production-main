@@ -25,14 +25,7 @@ services:
   - type: web
     name: pharmgenius-frontend
     plan: free
-    region: oregon
     runtime: static
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
-    envVars:
-      - key: NODE_VERSION
-        value: 18.x
-      - key: VITE_API_URL
-        value: https://pharmgenius-backend.onrender.com
-      - key: NPM_CONFIG_PRODUCTION
-        value: "false"
+    env
