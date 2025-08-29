@@ -15,12 +15,14 @@ services:
         value: 18.x
       - key: NODE_ENV
         value: production
-      # Add your environment variables here:
       - key: MONGODB_URI
+        value: ""
         sync: false
       - key: JWT_SECRET
+        value: ""
         sync: false
       - key: CORS_ORIGIN
+        value: ""
         sync: false
       - key: AUTH_DISABLED
         value: "false"
@@ -33,11 +35,12 @@ services:
     plan: free
     runtime: static
     buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
+    staticPublishPath: dist
     envVars:
       - key: NODE_VERSION
         value: 18.x
       - key: VITE_API_URL
+        value: ""
         sync: false
       - key: VITE_AUTH_DISABLED
         value: "false"
