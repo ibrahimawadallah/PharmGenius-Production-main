@@ -16,10 +16,16 @@ services:
       - key: NODE_ENV
         value: production
       # Add your environment variables here:
-      # - key: MONGODB_URI
-      #   sync: false
-      # - key: JWT_SECRET
-      #   sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: AUTH_DISABLED
+        value: "false"
+      # - key: LOG_LEVEL
+      #   value: info
 
   # Frontend Service (React)
   - type: web
@@ -28,4 +34,13 @@ services:
     runtime: static
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
+    envVars:
+      - key: NODE_VERSION
+        value: 18.x
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_AUTH_DISABLED
+        value: "false"
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
     env
