@@ -1,6 +1,7 @@
 {
   "name": "pharmgenius",
   "version": "1.0.0",
+  "type": "module",
   "description": "Comprehensive Healthcare Application",
   "main": "server/server.js",
   "scripts": {

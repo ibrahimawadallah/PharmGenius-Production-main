@@ -1,0 +1,37 @@
+# Render Blueprint for PharmGenius
+# Full-stack deployment configuration
+
+services:
+  # Backend Service (Node.js/Express)
+  - type: web
+    name: pharmgenius-backend
+    plan: free
+    region: oregon
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server/server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 18.x
+      - key: NODE_ENV
+        value: production
+      # Add your environment variables here:
+      # - key: MONGODB_URI
+      #   sync: false
+      # - key: JWT_SECRET
+      #   sync: false
+
+  # Frontend Service (React)
+  - type: static_site
+    name: pharmgenius-frontend
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: NODE_VERSION
+        value: 18.x
+      - key: VITE_API_URL
+        value: https://pharmgenius-backend.onrender.com
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
