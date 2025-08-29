@@ -40,8 +40,7 @@ services:
       - key: NODE_VERSION
         value: 18.x
       - key: VITE_API_URL
-        value: ""
-        sync: false
+        value: "https://pharmgenius-backend.onrender.com"
       - key: VITE_AUTH_DISABLED
         value: "false"
       - key: NPM_CONFIG_PRODUCTION
