@@ -5,7 +5,6 @@ services:
   # Backend Service (Node.js/Express)
   - type: web
     name: pharmgenius-backend
-    plan: free
     region: oregon
     runtime: node
     buildCommand: npm install
@@ -29,7 +28,6 @@ services:
   # Frontend Service (React)
   - type: web
     name: pharmgenius-frontend
-    plan: free
     runtime: static
     buildCommand: npm install && npm run build
     staticPublishPath: dist
