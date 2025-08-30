@@ -227,7 +227,7 @@ class HealthMonitor {
       }
       
       return { files: fileStatus };
-    }, { critical: true });
+    }, { critical: process.env.DATA_FILES_CRITICAL === 'true' });
 
     // Environment check
     this.registerCheck('environment', async () => {
