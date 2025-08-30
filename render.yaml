@@ -7,7 +7,7 @@ services:
     name: pharmgenius-backend
     region: oregon
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm install
     startCommand: node server/server.js
     healthCheckPath: /api/health
