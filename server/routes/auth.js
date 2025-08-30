@@ -5,24 +5,24 @@ import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
 import { sendPasswordResetEmail, sendWelcomeEmail } from '../services/emailService.js';
 import logger from '../utils/logger.js';
-import rateLimit from 'express-rate-limit';
+import { rateLimit } from 'express-rate-limit';
 
 const router = express.Router();
 
 // Rate limiting for auth endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
+  limit: 5, // limit each IP to 5 requests per window
   message: 'Too many authentication attempts, please try again later.',
-  standardHeaders: true,
+  standardHeaders: 'draft-8',
   legacyHeaders: false,
 });
 
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // limit each IP to 3 registration attempts per hour
+  limit: 3, // limit each IP to 3 registration attempts per hour
   message: 'Too many registration attempts, please try again later.',
-  standardHeaders: true,
+  standardHeaders: 'draft-8',
   legacyHeaders: false,
 });
 
@@ -308,6 +308,52 @@ router.post('/login', authLimiter, validateLogin, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Internal server error during login',
+    });
+  }
+});
+
+// Development static admin login (username: admin, password: admin)
+router.post('/dev-login', authLimiter, async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+
+    if (username === 'admin' && password === 'admin') {
+      const fakeUserId = '000000000000000000000000';
+      const userResponse = {
+        _id: fakeUserId,
+        email: 'admin@local',
+        firstName: 'Admin',
+        lastName: 'User',
+        role: 'admin',
+        organizationId: null,
+        emailVerified: true,
+        status: 'active',
+        permissions: (typeof getDefaultPermissions === 'function') ? getDefaultPermissions('admin') : ['*'],
+        createdAt: new Date(),
+      };
+
+      const { accessToken, refreshToken } = generateTokens(fakeUserId, 'admin');
+
+      logger.warn('Static admin dev-login used');
+
+      return res.json({
+        success: true,
+        message: 'Login successful',
+        user: userResponse,
+        accessToken,
+        refreshToken,
+      });
+    }
+
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid username or password',
+    });
+  } catch (error) {
+    logger.error('Dev login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error during dev login',
     });
   }
 });
