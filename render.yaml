@@ -20,12 +20,12 @@ services:
         generateValue: true
       - key: CORS_ORIGIN
         fromService:
-          type: static_site
+          type: web
           name: pharmgenius-frontend
           property: url
       - key: FRONTEND_URL
         fromService:
-          type: static_site
+          type: web
           name: pharmgenius-frontend
           property: url
       - key: AUTH_DISABLED
@@ -34,8 +34,9 @@ services:
       #   value: info
 
   # Frontend Service (React)
-  - type: static_site
+  - type: web
     name: pharmgenius-frontend
+    runtime: static
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     envVars:
