@@ -22,12 +22,12 @@ services:
         fromService:
           type: web
           name: pharmgenius-frontend
-          property: url
+          envVarKey: RENDER_EXTERNAL_URL
       - key: FRONTEND_URL
         fromService:
           type: web
           name: pharmgenius-frontend
-          property: url
+          envVarKey: RENDER_EXTERNAL_URL
       - key: AUTH_DISABLED
         value: "false"
       # - key: LOG_LEVEL
@@ -46,7 +46,7 @@ services:
         fromService:
           type: web
           name: pharmgenius-backend
-          property: url
+          envVarKey: RENDER_EXTERNAL_URL
       - key: VITE_AUTH_DISABLED
         value: "false"
       - key: NPM_CONFIG_PRODUCTION
